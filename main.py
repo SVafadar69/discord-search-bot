@@ -9,7 +9,7 @@ load_dotenv()
 
 app = FastAPI()
 
-render_url = 'https://render.com/link'
+render_url = 'https://discord-search-bot-jei6.onrender.com'
 
 TEAM_ID = os.getenv('TEAM_ID')
 BUNDLE_ID = os.getenv('BUNDLE_ID')
