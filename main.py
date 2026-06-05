@@ -72,6 +72,7 @@ async def send_push(token: str, payload: dict):
         print(response.text)
         return response
 
+
 @app.post('/register')
 async def retrieve_token(device_token: str) -> str: 
     tokens = load_tokens()
