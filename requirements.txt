@@ -5,3 +5,4 @@ openai==2.41.0
 pydantic==2.13.4
 PyJWT==2.13.0
 python-dotenv==1.2.2
+uvicorn
