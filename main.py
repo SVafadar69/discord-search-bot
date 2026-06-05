@@ -15,7 +15,7 @@ TEAM_ID = os.getenv('TEAM_ID')
 BUNDLE_ID = os.getenv('BUNDLE_ID')
 KEY_ID = os.getenv('KEY_ID')
 PRIVATE_KEY_PATH = os.getenv('PRIVATE_KEY_PATH')
-PRIVATE_KEY = open(path).read()
+PRIVATE_KEY = open(PRIVATE_KEY_PATH).read()
 APNS_URL = os.getenv("APNS_URL")
 device_token = os.getenv("device_token")
 
