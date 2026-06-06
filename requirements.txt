@@ -7,3 +7,4 @@ PyJWT==2.10.1
 python-dotenv==1.2.2
 uvicorn
 pyjwt[crypto]
+httpx[http2]
