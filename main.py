@@ -76,6 +76,7 @@ async def send_push(token: str, payload: dict):
 @app.post('/register')
 async def retrieve_token(device_token: str) -> str: 
     tokens = load_tokens()
+    print(f'load tokens: {load_tokens}')
     if device_token not in tokens: 
         tokens.append(token)
     with open(TOKENS_FILE, 'a', encoding='utf-8') as file: 
