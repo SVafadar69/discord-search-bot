@@ -78,7 +78,7 @@ async def send_push(token: str, payload: dict):
 
 
 @app.post('/register')
-async def retrieve_token(device_token: DeviceRegistration) -> str: 
+async def retrieve_token(device_token: DeviceRegistration): 
     tokens = load_tokens()
     print(f'load tokens: {load_tokens}')
     if device_token not in tokens: 
