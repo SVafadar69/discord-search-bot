@@ -18,7 +18,7 @@ PRIVATE_KEY_PATH = os.getenv('PRIVATE_KEY_PATH')
 PRIVATE_KEY = open(PRIVATE_KEY_PATH).read()
 APNS_URL = os.getenv("APNS_URL")
 device_token = os.getenv("device_token")
-TOKENS_FILE = os.getenv('TOKENS_FILE')
+TOKENS_FILE = str(os.getenv('TOKENS_FILE'))
 
 class DeviceRegistration(BaseModel):
     device_token: str 
