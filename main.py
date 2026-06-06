@@ -20,6 +20,10 @@ APNS_URL = os.getenv("APNS_URL")
 device_token = os.getenv("device_token")
 TOKENS_FILE = os.getenv('TOKENS_FILE')
 
+class DeviceRegistration(BaseModel):
+    device_token: str 
+    name: str 
+
 class DetectionRequest(BaseModel):
     type: str
     person_name: str
@@ -74,7 +78,7 @@ async def send_push(token: str, payload: dict):
 
 
 @app.post('/register')
-async def retrieve_token(device_token: str) -> str: 
+async def retrieve_token(device_token: DeviceRegistration) -> str: 
     tokens = load_tokens()
     print(f'load tokens: {load_tokens}')
     if device_token not in tokens: 
@@ -85,8 +89,12 @@ async def retrieve_token(device_token: str) -> str:
 def load_tokens() -> list[str]:
     if not os.path.exists(TOKENS_FILE):
         return []
-    with open(TOKENS_FILE) as f: 
-        return json.load(f)
+    with open(TOKENS_FILE, 'r', encoding='utf-8') as f: 
+        try:
+            json.load(f)
+        except Exception as e: 
+            print(f'Error when trying to open JSON: {e}')
+            return []
 
 @app.post(f'/detection')
 async def handle_detection(detection: DetectionRequest):
