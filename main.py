@@ -22,7 +22,7 @@ TOKENS_FILE = os.getenv('TOKENS_FILE')
 
 class DeviceRegistration(BaseModel):
     device_token: str 
-    name: str 
+    user_name: str 
 
 class DetectionRequest(BaseModel):
     type: str
