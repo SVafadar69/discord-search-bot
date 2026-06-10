@@ -1,29 +1,37 @@
-
-
+import json
 from dotenv import load_dotenv 
 import os 
 import openai 
 import discord
+from datetime import timezone
 from typing import List
+import chromadb
 from chromadb.utils import embedding_functions
 from chromadb.utils.embedding_functions import ChromaCloudSpladeEmbeddingFunction
 from chromadb.execution.expression.operator import K
 from chromadb import Search, K, Knn, Rrf, Schema, SparseVectorIndexConfig, K
+import ast
 load_dotenv()
 
 
-openai_api_key = os.getenv("openai_api_key")
-chromadb_api_key = os.getenv("chromadb_api_key")
-chromadb_tenant= os.getenv("chromadb_tenant")
-chromadb_database= os.getenv("chromadb_database")
+openai_api_key = os.getenv("OPENAI_API_KEY")
+chromadb_api_key = os.getenv("CHROMA_API_KEY")
+chromadb_tenant= os.getenv("CHROMADB_TENANT")
+chromadb_database= os.getenv("CHROMADB_DATABASE")
 chroma_collection_name = os.getenv("CHROMA_COLLECTION_NAME")
-discord_bot_token = os.getenv("discord_bot_token")
-discord_channel_id = int(os.getenv("discord_channel_id"))
+discord_bot_token = os.getenv("DISCORD_BOT_TOKEN")
+discord_channel_id = int(os.getenv("DISCORD_CHANNEL_ID"))
 
-CHUNK_SIZE = 3
+os.environ['CHROMA_API_KEY'] = chromadb_api_key
+
+starting_chunk_index = 163
 
 client = discord.Client(intents=discord.Intents.default())
-
+chroma_client = chromadb.CloudClient(
+  api_key= chromadb_api_key,
+  tenant= chromadb_tenant, 
+  database= chromadb_database
+)
 schema = Schema()
 
 
@@ -36,7 +44,7 @@ schema.create_index(
     key="sparse_embedding"
 )
 
-collection_anduril = client.get_or_create_collection(
+collection_anduril = chroma_client.get_or_create_collection(
     name=chroma_collection_name,
     schema=schema
 )
@@ -65,18 +73,21 @@ def retrieve_prompt(prompt_name: str) -> str:
     prompt = open(prompt_name, 'r', encoding='utf-8').read()
     return prompt
 
-def rewrite_query(system_prompt: str) -> str: 
+def answer_query(system_prompt: str) -> str: 
     response = openai_client.responses.create(
         model="gpt-5.4-nano",
         input=system_prompt 
     )
     return response.output_text
 
-def chunk_documents(documents):
-    step = CHUNK_SIZE - OVERLAP
+formatted_messages = []
 
-    for chunk_start in range(0, len(documents), step):
-        chunk = formatted_messages_shay[chunk_start:chunk_start + CHUNK_SIZE]
+def chunk_documents(messages: list, chunk_size: int = 10, overlap: int = 3):
+    step = chunk_size - overlap
+
+    for chunk_start in range(0, len(messages), step):
+        chunk = messages[chunk_start:chunk_start + chunk_size]
+        print(f'chunk: {chunk}')
 
         if not chunk:
             continue
@@ -89,7 +100,7 @@ def chunk_documents(documents):
 
         documents = [
             "\n".join(
-                msg["text"]
+                f'sender_name: {msg["sender_name"]}\nmessage: {msg["text"]}'
                 for msg in chunk
             )
         ]
@@ -98,9 +109,8 @@ def chunk_documents(documents):
             {
                 "messages_metadata": json.dumps([
                     {
-                        "date": str(msg["date"]),
-                        "sender": msg["sender"],
-                        "recipient": msg["recipient"],
+                        "sender": msg["sender_name"],
+                        "message_id": msg['message_id']
                     }
                     for msg in chunk
                 ])
@@ -108,13 +118,13 @@ def chunk_documents(documents):
         ]
 
 
-        collection_shay_all.add(
+        collection_anduril.add(
             ids=ids,
             documents=documents,
             metadatas=metadatas,
         )
 
-        print(f"Uploaded shay chunk {chunk_start} to {chunk_end}")
+        print(f"Uploaded anduril chunk {chunk_start} to {chunk_end}")
 
 
 @client.event
@@ -125,17 +135,27 @@ async def on_rate_limit(payload):
 async def on_ready():
     channel = client.get_channel(discord_channel_id)
     print(f'channel: {channel}')
-    messages = [msg async for msg in channel.history(limit=None)]
-    print(messages[-3].content)
-    print('\n', type(messages[0]))
-    print(messages[1])
-    print('\n')
-    print(messages[2])
-    print('\n', messages[2])
-
+    messages = [
+        {
+            'message_id': str(msg.id),
+            'sender_name': msg.author.display_name, 
+            'text': msg.content
+        }
+        async for msg in channel.history(limit = None)
+    ]
     print(f"Got {len(messages)} messages")
+
+    with open('discord_messages', 'a', encoding='utf-8') as file: 
+        file.write(str(messages))
     await client.close()
 
+def retrieve_messages(messages_path: str = 'discord_messages'):
+    messages = ast.literal_eval(open(messages_path, 'r', encoding='utf-8').read())
+    senders = set([message.get('sender_name', '') for message in messages])
+    print(len(senders))
+    print(senders)
 
-
-client.run(discord_bot_token)
+# client.run(discord_bot_token)
+if __name__ == "__main__":
+    messages = ast.literal_eval(open('discord_messages', 'r', encoding='utf-8').read())
+    chunk_documents(messages)
