@@ -1,6 +1,7 @@
 import json
 from dotenv import load_dotenv 
 import os 
+import tiktoken
 import openai 
 from openai import OpenAI
 from groq import Groq
@@ -90,7 +91,7 @@ def groq_answer(system_prompt: str) -> str:
    
     client = Groq(api_key = groq_api_key)
     completion = client.chat.completions.create(
-    model="openai/gpt-oss-120b",
+    model="llama-3.3-70b-versatile",
     messages=[
       {
         "role": "system",
@@ -98,10 +99,9 @@ def groq_answer(system_prompt: str) -> str:
       },
       
     ],
-    temperature=1,
-    max_completion_tokens=8192,
+    temperature=0.2,
+    max_completion_tokens=1024,
     top_p=1,
-    reasoning_effort="high",
     stream=False,
     stop=None)
 
@@ -182,16 +182,21 @@ def retrieve_messages(messages_path: str = 'discord_messages'):
     print(len(senders))
     print(senders)
 
+def get_token_count(text: str) -> int: 
+    encoding = tiktoken.encoding_for_model("gpt-4")
+    tokens = encoding.encode(text)
+    return len(tokens)
+
 # client.run(discord_bot_token)
 if __name__ == "__main__":
     messages = ast.literal_eval(open('discord_messages', 'r', encoding='utf-8').read())
     #chunk_documents(messages)
-    query = 'What is Steven currently building?'
+    query = 'What is ohsheetklaus currently building'
     responses = run_hybrid_search(collection = collection_anduril, query = query)
-    documents = responses.get('documents', '')
-    print(F'responses: {documents}')
+    documents = responses.get('documents', '')[:10]
     print(len(documents))
     system_prompt = retrieve_prompt('search_prompt.txt').format(USER_QUERY = query, DOCS = documents)
-    print(f'system_prompt: {system_prompt}')
+    token_count = get_token_count(system_prompt)
+    print(f'token length: {token_count}')
     llm_response = answer_query(system_prompt = system_prompt)
     print(f'llm_responses: {llm_response}')
