@@ -14,6 +14,7 @@ from chromadb.utils.embedding_functions import ChromaCloudSpladeEmbeddingFunctio
 from chromadb.execution.expression.operator import K
 from chromadb import Search, K, Knn, Rrf, Schema, SparseVectorIndexConfig, K
 import ast
+import time
 load_dotenv()
 
 
@@ -138,7 +139,7 @@ def chunk_documents(messages: list, chunk_size: int = 10, overlap: int = 3):
         chunk_end = chunk_start + len(chunk) - 1
 
         ids = [
-            f"shay_chunk_{chunk_start}_{chunk_end}"
+            f"chunk_{chunk_start}_{chunk_end}"
         ]
 
         documents = [
@@ -153,9 +154,9 @@ def chunk_documents(messages: list, chunk_size: int = 10, overlap: int = 3):
                 "messages_metadata": json.dumps([
                     {
                         "sender": msg["sender_name"],
-                        "message_id": msg['message_id']
+                        "message_id": str(chunk_start + i)
                     }
-                    for msg in chunk
+                    for i, msg in enumerate(chunk)
                 ])
             }
         ]
@@ -191,22 +192,24 @@ async def on_rate_limit(payload):
 
 @client.event
 async def on_ready():
+    all_messages = []
     for channel in channels: 
-        channel = client.get_channel(discord_channel_id)
+        channel = client.get_channel(channel)
         print(f'channel: {channel}')
         messages = [
             {
-                'message_id': str(msg.id),
-                'sender_name': server_users.get(msg.author.display_name, msg.author.display_name), 
-                'text': msg.content
+                "sender_name": server_users.get(msg.author.display_name, msg.author.display_name), 
+                "text": msg.content, 
+                "date": msg.created_at.strftime("%Y-%m-%d %H:%M:%S")
             }
             async for msg in channel.history(limit = None)
         ]
         print(f"Got {len(messages)} messages")
+        all_messages.extend(messages)
 
-        with open(f'discord_messages_all', 'a', encoding='utf-8') as file: 
-            file.write(str(messages))
-        await client.close()
+        with open('discord_messages_all', 'w', encoding='utf-8') as file: 
+            file.write(str(all_messages))
+    await client.close()
 
 def retrieve_messages(messages_path: str = 'discord_messages'):
     messages = ast.literal_eval(open(messages_path, 'r', encoding='utf-8').read())
@@ -219,16 +222,17 @@ def get_token_count(text: str) -> int:
     tokens = encoding.encode(text)
     return len(tokens)
 
-client.run(discord_bot_token)
-# if __name__ == "__main__":
-    # messages = ast.literal_eval(open('discord_messages', 'r', encoding='utf-8').read())
-    # #chunk_documents(messages)
-    # query = 'What is ohsheetklaus currently building'
-    # responses = run_hybrid_search(collection = collection_anduril, query = query)
-    # documents = responses.get('documents', '')[:10]
-    # print(len(documents))
-    # system_prompt = retrieve_prompt('search_prompt.txt').format(USER_QUERY = query, DOCS = documents)
-    # token_count = get_token_count(system_prompt)
-    # print(f'token length: {token_count}')
-    # llm_response = answer_query(system_prompt = system_prompt)
-    # print(f'llm_responses: {llm_response}')
+
+#client.run(discord_bot_token)
+if __name__ == "__main__":
+    # messages = ast.literal_eval(open('discord_messages_all', 'r', encoding='utf-8').read())
+    # chunk_documents(messages)
+    query = 'What is ohsheetklaus currently building'
+    responses = run_hybrid_search(collection = collection_anduril, query = query)
+    documents = responses.get('documents', '')[:10]
+    print(len(documents))
+    system_prompt = retrieve_prompt('search_prompt.txt').format(USER_QUERY = query, DOCS = documents)
+    token_count = get_token_count(system_prompt)
+    print(f'token length: {token_count}')
+    llm_response = answer_query(system_prompt = system_prompt)
+    print(f'llm_responses: {llm_response}')
