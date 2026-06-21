@@ -29,6 +29,9 @@ class DetectionRequest(BaseModel):
     person_name: str
     confidence: float
 
+class FaceEmbeddings(BaseModel): 
+    
+
 def generate_apns_token() -> str: 
     print(f'{TEAM_ID}, {PRIVATE_KEY}, {DEVICE_TOKEN}, {KEY_ID}')
     return jwt.encode(
@@ -106,6 +109,9 @@ async def handle_detection(detection: DetectionRequest):
     response = await send_push(DEVICE_TOKEN, payload)
     print(f'response: {response.text}')
     return {'apns_status': response.status_code, 'apns_body': response.text}
+
+@app.post('/face_embeddings')
+async def embed_face()
 
 if __name__ == "__main__":
     port = int(os.getenv('PORT', 8000))
